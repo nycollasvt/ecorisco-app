@@ -1,0 +1,299 @@
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:sizer/sizer.dart';
+
+import '../../core/app_export.dart';
+import '../../widgets/map_placeholder_widget.dart';
+import './widgets/ai_recommendation_banner.dart';
+import './widgets/floating_search_bar.dart';
+import './widgets/map_layer_toggle.dart';
+import './widgets/offline_maps_indicator.dart';
+import './widgets/quick_actions_fab.dart';
+import './widgets/trail_preview_sheet.dart';
+
+class MapDashboard extends StatefulWidget {
+  const MapDashboard({Key? key}) : super(key: key);
+
+  @override
+  State<MapDashboard> createState() => _MapDashboardState();
+}
+
+class _MapDashboardState extends State<MapDashboard>
+    with TickerProviderStateMixin {
+  GoogleMapController? _mapController;
+  Position? _currentPosition;
+  int _selectedTabIndex = 0;
+  Map<String, dynamic>? _selectedTrail;
+  bool _showTrailPreview = false;
+  bool _showAiRecommendation = true;
+  bool _showLayerToggle = false;
+  MapLayerType _currentMapLayer = MapLayerType.standard;
+  double _offlineDownloadProgress = 0.0;
+  bool _isOfflineAvailable = false;
+
+  late TabController _tabController;
+
+  final List<Map<String, dynamic>> _trails = [
+    {
+      "id": 1,
+      "name": "Trilha da Pedra Bonita",
+      "latitude": -22.9868,
+      "longitude": -43.2871,
+      "difficulty": "Moderate",
+      "distance": "2.5",
+      "duration": "1h 30min",
+      "image": "https://images.unsplash.com/photo-1551632811-561732d1e306?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3",
+      "description": "Uma trilha moderada com vista panorâmica da cidade do Rio de Janeiro."
+    },
+    {
+      "id": 2,
+      "name": "Pão de Açúcar",
+      "latitude": -22.9489,
+      "longitude": -43.1566,
+      "difficulty": "Easy",
+      "distance": "1.2",
+      "duration": "45min",
+      "image": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3",
+      "description": "Trilha fácil até um dos cartões postais mais famosos do Rio."
+    },
+  ];
+
+  final Map<String, dynamic> _aiRecommendation = {
+    "title": "Trilha da Pedra Bonita",
+    "description": "Perfeita para hoje! Clima ideal e baixa movimentação.",
+    "weather": "25°C, Ensolarado",
+    "difficulty": "Moderate",
+    "reason": "Baseado no seu histórico e condições atuais"
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        setState(() {
+          _currentPosition = position;
+        });
+      }
+    } catch (e) {
+      // Handle location error silently
+    }
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    if (_currentPosition != null) {
+      _centerMapOnCurrentLocation();
+    }
+  }
+
+  void _centerMapOnCurrentLocation() {
+    if (_mapController != null && _currentPosition != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+          15.0,
+        ),
+      );
+    }
+  }
+
+  Set<Marker> _buildMarkers() {
+    return _trails.map((trail) {
+      return Marker(
+        markerId: MarkerId('trail_${trail['id']}'),
+        position: LatLng(trail['latitude'], trail['longitude']),
+        onTap: () => _showTrailDetails(trail),
+        icon: BitmapDescriptor.defaultMarkerWithHue(
+          _getMarkerColor(trail['difficulty']),
+        ),
+      );
+    }).toSet();
+  }
+
+  double _getMarkerColor(String difficulty) {
+    switch (difficulty.toLowerCase()) {
+      case 'easy': return BitmapDescriptor.hueGreen;
+      case 'moderate': return BitmapDescriptor.hueOrange;
+      case 'difficult': return BitmapDescriptor.hueRed;
+      default: return BitmapDescriptor.hueRed;
+    }
+  }
+
+  void _showTrailDetails(Map<String, dynamic> trail) {
+    setState(() {
+      _selectedTrail = trail;
+      _showTrailPreview = true;
+    });
+  }
+
+  void _hideTrailPreview() {
+    setState(() {
+      _showTrailPreview = false;
+      _selectedTrail = null;
+    });
+  }
+
+  MapType _getMapType() {
+    switch (_currentMapLayer) {
+      case MapLayerType.satellite: return MapType.satellite;
+      case MapLayerType.terrain: return MapType.terrain;
+      default: return MapType.normal;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.lightTheme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            kMapaSimuladoAtivo
+                ? MapPlaceholderWidget(
+                    onTap: (_) => setState(() => _showLayerToggle = false),
+                  )
+                : GoogleMap(
+                    onMapCreated: _onMapCreated,
+                    initialCameraPosition: CameraPosition(
+                      target: _currentPosition != null
+                          ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                          : const LatLng(-22.9068, -43.1729),
+                      zoom: 12.0,
+                    ),
+                    markers: _buildMarkers(),
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapType: _getMapType(),
+                    onTap: (_) => setState(() => _showLayerToggle = false),
+                  ),
+
+            Positioned(
+              top: 2.h,
+              left: 0,
+              right: 0,
+              child: FloatingSearchBar(
+                onSearch: (query) {},
+                onFilterTap: () {},
+              ),
+            ),
+
+            Positioned(
+              top: 2.h,
+              right: 4.w,
+              child: GestureDetector(
+                onTap: () => setState(() => _showLayerToggle = !_showLayerToggle),
+                child: Container(
+                  width: 12.w, height: 12.w,
+                  decoration: BoxDecoration(
+                    color: AppTheme.lightTheme.colorScheme.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
+                  ),
+                  child: Center(
+                    child: CustomIconWidget(
+                      iconName: 'layers',
+                      color: AppTheme.lightTheme.colorScheme.onSurface,
+                      size: 6.w,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            if (_showLayerToggle)
+              Positioned(
+                top: 12.h, // Adjusted position
+                right: 4.w,
+                child: MapLayerToggle(
+                  currentLayer: _currentMapLayer,
+                  onLayerChanged: (layer) {
+                    setState(() {
+                      _currentMapLayer = layer;
+                      _showLayerToggle = false;
+                    });
+                  },
+                ),
+              ),
+
+            Positioned(
+              bottom: 25.h, right: 4.w,
+              child: FloatingActionButton.small(
+                onPressed: _centerMapOnCurrentLocation,
+                backgroundColor: AppTheme.lightTheme.colorScheme.surface,
+                child: Icon(Icons.my_location, color: AppTheme.lightTheme.colorScheme.onSurface),
+              ),
+            ),
+
+            Positioned(
+              bottom: 15.h, right: 4.w,
+              child: QuickActionsFab(
+                onCreateTrail: () => Navigator.pushNamed(context, AppRoutes.guideProfile), // Placeholder nav
+                onRecordRoute: () => Navigator.pushNamed(context, AppRoutes.guideProfile), // Placeholder nav
+                onNearbyTours: () => Navigator.pushNamed(context, AppRoutes.guideProfile),
+              ),
+            ),
+
+            if (_showAiRecommendation)
+              Positioned(
+                bottom: 12.h, left: 0, right: 0,
+                child: AiRecommendationBanner(
+                  recommendation: _aiRecommendation,
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.guideProfile), // Placeholder nav
+                  onDismiss: () => setState(() => _showAiRecommendation = false),
+                ),
+              ),
+
+            if (_showTrailPreview && _selectedTrail != null)
+              Positioned(
+                bottom: 0, left: 0, right: 0, // Adjusted to bottom
+                child: TrailPreviewSheet(
+                  trail: _selectedTrail!,
+                  onViewDetails: () => Navigator.pushNamed(context, AppRoutes.guideProfile), // Placeholder nav
+                  onClose: _hideTrailPreview,
+                ),
+              ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: TabBar(
+        controller: _tabController,
+        labelColor: AppTheme.lightTheme.colorScheme.primary,
+        unselectedLabelColor: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(color: AppTheme.lightTheme.colorScheme.primary, width: 2.0)
+        ),
+        tabs: [
+          Tab(icon: CustomIconWidget(iconName: 'map', size: 6.w), text: 'Mapa'),
+          Tab(icon: CustomIconWidget(iconName: 'hiking', size: 6.w), text: 'Trilhas'),
+          Tab(icon: CustomIconWidget(iconName: 'tour', size: 6.w), text: 'Tours'),
+          Tab(icon: CustomIconWidget(iconName: 'person', size: 6.w), text: 'Perfil'),
+        ],
+      ),
+    );
+  }
+}

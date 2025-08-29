@@ -1,0 +1,233 @@
+import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class GuideHeaderWidget extends StatelessWidget {
+  final Map<String, dynamic> guideData;
+  final VoidCallback onFavoritePressed;
+  final VoidCallback onSharePressed;
+  final bool isFavorite;
+
+  const GuideHeaderWidget({
+    Key? key,
+    required this.guideData,
+    required this.onFavoritePressed,
+    required this.onSharePressed,
+    required this.isFavorite,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(4.w),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 15.w,
+            backgroundImage: NetworkImage(guideData["profileImage"]),
+          ),
+          SizedBox(height: 2.h),
+          Text(
+            guideData["name"],
+            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 1.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CustomIconWidget(iconName: 'star', color: Colors.amber, size: 5.w),
+              SizedBox(width: 1.w),
+              Text("${guideData["rating"]} (${guideData["toursCompleted"]} tours)"),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class GuideTabsWidget extends StatelessWidget {
+  final TabController tabController;
+
+  const GuideTabsWidget({
+    Key? key,
+    required this.tabController,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w),
+      child: TabBar(
+        controller: tabController,
+        labelColor: AppTheme.lightTheme.primaryColor,
+        unselectedLabelColor: Colors.grey,
+        tabs: const [
+          Tab(text: "Sobre"),
+          Tab(text: "Avaliações"),
+          Tab(text: "Agenda"),
+          Tab(text: "Fotos"),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+
+class AboutTabWidget extends StatelessWidget {
+  final Map<String, dynamic> guideData;
+
+  const AboutTabWidget({
+    Key? key,
+    required this.guideData,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(4.w),
+      child: Text(guideData["bio"]),
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class ReviewsTabWidget extends StatelessWidget {
+  final List<Map<String, dynamic>> reviews;
+
+  const ReviewsTabWidget({
+    Key? key,
+    required this.reviews,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: EdgeInsets.all(4.w),
+      itemCount: reviews.length,
+      itemBuilder: (context, index) {
+        final review = reviews[index];
+        return Card(
+          margin: EdgeInsets.only(bottom: 2.h),
+          child: Padding(
+            padding: EdgeInsets.all(3.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(review["userName"], style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(review["comment"]),
+                Row(
+                  children: List.generate(5, (starIndex) {
+                    return CustomIconWidget(
+                      iconName: starIndex < review["rating"] ? 'star' : 'star_border',
+                      color: Colors.amber,
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+
+class AvailabilityTabWidget extends StatelessWidget {
+  final Map<String, dynamic> availabilityData;
+  final Function(DateTime, String) onDateSelected;
+
+  const AvailabilityTabWidget({
+    Key? key,
+    required this.availabilityData,
+    required this.onDateSelected,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Text("Funcionalidade de calendário e horários em construção."),
+      ),
+    );
+  }
+}import 'package.flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class PhotosTabWidget extends StatelessWidget {
+  final List<Map<String, dynamic>> photos;
+
+  const PhotosTabWidget({
+    Key? key,
+    required this.photos,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: EdgeInsets.all(4.w),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 2.w,
+        mainAxisSpacing: 2.w,
+      ),
+      itemCount: photos.length,
+      itemBuilder: (context, index) {
+        return CustomImageWidget(
+          imageUrl: photos[index]["url"],
+          fit: BoxFit.cover,
+        );
+      },
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class BookingBottomSheetWidget extends StatelessWidget {
+  final Map<String, dynamic> guideData;
+  final DateTime? selectedDate;
+  final String? selectedTime;
+  final Function(Map<String, dynamic>) onBookingConfirmed;
+
+  const BookingBottomSheetWidget({
+    Key? key,
+    required this.guideData,
+    this.selectedDate,
+    this.selectedTime,
+    required this.onBookingConfirmed,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(5.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text("Confirmar Tour com ${guideData['name']}", style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+          SizedBox(height: 4.h),
+          Text("Detalhes da reserva aqui..."),
+          SizedBox(height: 4.h),
+          ElevatedButton(
+            onPressed: () => onBookingConfirmed({}),
+            child: Text("Confirmar e Pagar"),
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(double.infinity, 50),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}

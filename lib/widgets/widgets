@@ -1,0 +1,344 @@
+import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class FloatingSearchBar extends StatelessWidget {
+  final Function(String) onSearch;
+  final VoidCallback onFilterTap;
+
+  const FloatingSearchBar({
+    Key? key,
+    required this.onSearch,
+    required this.onFilterTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w),
+      padding: EdgeInsets.symmetric(horizontal: 3.w),
+      decoration: BoxDecoration(
+        color: AppTheme.lightTheme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(30), // More rounded
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CustomIconWidget(iconName: 'search', color: Colors.grey, size: 6.w),
+          SizedBox(width: 2.w),
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Buscar trilhas ou locais...',
+                border: InputBorder.none,
+              ),
+              onSubmitted: onSearch,
+            ),
+          ),
+          IconButton(
+            icon: CustomIconWidget(iconName: 'tune', color: Colors.grey, size: 6.w),
+            onPressed: onFilterTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class AiRecommendationBanner extends StatelessWidget {
+  final Map<String, dynamic> recommendation;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  const AiRecommendationBanner({
+    Key? key,
+    required this.recommendation,
+    required this.onTap,
+    required this.onDismiss,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: AppTheme.lightTheme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5)],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+            child: CustomIconWidget(iconName: 'psychology', color: Colors.white, size: 6.w),
+          ),
+          SizedBox(width: 3.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('IA Recomenda: ${recommendation['title']}', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(recommendation['description'], style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+          IconButton(icon: Icon(Icons.close, size: 4.w), onPressed: onDismiss),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class QuickActionsFab extends StatefulWidget {
+  final VoidCallback onCreateTrail;
+  final VoidCallback onRecordRoute;
+  final VoidCallback onNearbyTours;
+
+  const QuickActionsFab({
+    Key? key,
+    required this.onCreateTrail,
+    required this.onRecordRoute,
+    required this.onNearbyTours,
+  }) : super(key: key);
+
+  @override
+  _QuickActionsFabState createState() => _QuickActionsFabState();
+}
+
+class _QuickActionsFabState extends State<QuickActionsFab> with SingleTickerProviderStateMixin {
+  bool isOpened = false;
+  late AnimationController _animationController;
+  late Animation<double> _animateIcon;
+  late Animation<double> _translateButton;
+
+  @override
+  void initState() {
+    _animationController = AnimationController(vsync: this, duration: Duration(milliseconds: 500))..addListener(() { setState(() {}); });
+    _animateIcon = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+    _translateButton = Tween<double>(begin: 0, end: 1.0).animate(CurvedAnimation(parent: _animationController, curve: Curves.elasticOut));
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void animate() {
+    if (!isOpened) {
+      _animationController.forward();
+    } else {
+      _animationController.reverse();
+    }
+    isOpened = !isOpened;
+  }
+
+  Widget _buildFab(String tooltip, String iconName, VoidCallback onPressed) {
+    return Container(
+      child: FloatingActionButton(
+        onPressed: onPressed,
+        tooltip: tooltip,
+        child: CustomIconWidget(iconName: iconName),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        Transform(
+          transform: Matrix4.translationValues(0.0, _translateButton.value * -100.0, 0.0),
+          child: _buildFab('Tours Próximos', 'tour', widget.onNearbyTours),
+        ),
+        SizedBox(height: 1.h),
+        Transform(
+          transform: Matrix4.translationValues(0.0, _translateButton.value * -50.0, 0.0),
+          child: _buildFab('Gravar Percurso', 'radio_button_checked', widget.onRecordRoute),
+        ),
+        SizedBox(height: 1.h),
+        FloatingActionButton(
+          onPressed: animate,
+          child: AnimatedIcon(icon: AnimatedIcons.menu_close, progress: _animateIcon),
+        ),
+      ],
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class TrailPreviewSheet extends StatelessWidget {
+  final Map<String, dynamic> trail;
+  final VoidCallback onViewDetails;
+  final VoidCallback onClose;
+
+  const TrailPreviewSheet({
+    Key? key,
+    required this.trail,
+    required this.onViewDetails,
+    required this.onClose,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: AppTheme.lightTheme.colorScheme.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 12.w, height: 1.h,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Text(trail['name'], style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 1.h),
+          Text(trail['description']),
+          SizedBox(height: 2.h),
+          ElevatedButton(
+            onPressed: onViewDetails,
+            child: Text('Ver Detalhes'),
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(double.infinity, 50),
+            ),
+          ),
+          TextButton(
+            onPressed: onClose,
+            child: Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
+import '../../../core/app_export.dart';
+
+class TrailPreviewSheet extends StatelessWidget {
+  final Map<String, dynamic> trail;
+  final VoidCallback onViewDetails;
+  final VoidCallback onClose;
+
+  const TrailPreviewSheet({
+    Key? key,
+    required this.trail,
+    required this.onViewDetails,
+    required this.onClose,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: AppTheme.lightTheme.colorScheme.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 12.w, height: 1.h,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Text(trail['name'], style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 1.h),
+          Text(trail['description']),
+          SizedBox(height: 2.h),
+          ElevatedButton(
+            onPressed: onViewDetails,
+            child: Text('Ver Detalhes'),
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(double.infinity, 50),
+            ),
+          ),
+          TextButton(
+            onPressed: onClose,
+            child: Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import '../../../core/app_export.dart';
+
+enum MapLayerType { standard, satellite, terrain }
+
+class MapLayerToggle extends StatelessWidget {
+  final MapLayerType currentLayer;
+  final Function(MapLayerType) onLayerChanged;
+
+  const MapLayerToggle({
+    Key? key,
+    required this.currentLayer,
+    required this.onLayerChanged,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: MapLayerType.values.map((layer) {
+          return ListTile(
+            title: Text(layer.toString().split('.').last),
+            leading: Icon(_getIconForLayer(layer)),
+            onTap: () => onLayerChanged(layer),
+            selected: currentLayer == layer,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  IconData _getIconForLayer(MapLayerType layer) {
+    switch (layer) {
+      case MapLayerType.satellite: return Icons.satellite;
+      case MapLayerType.terrain: return Icons.terrain;
+      default: return Icons.map;
+    }
+  }
+}// Este widget é conceitual para criar marcadores customizados.
+// O código atual do map_dashboard usa os marcadores padrão do Google Maps.
+// Podemos manter este arquivo para uma futura implementação.
+import 'package:flutter/material.dart';
+
+class TrailMarkerWidget extends StatelessWidget {
+  const TrailMarkerWidget({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Container(); // Placeholder
+  }
+}
